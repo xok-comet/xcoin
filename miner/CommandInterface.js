@@ -4,7 +4,7 @@ const Mine = require("./mine");
 
 const vorpal = require("vorpal")();
 
-const Command = () => {
+const Command = (node) => {
   vorpal
     .command("mine", "Initialize blockchain")
     .action(async (args, callback) => {

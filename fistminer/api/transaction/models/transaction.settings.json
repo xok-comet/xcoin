@@ -1,8 +1,8 @@
 {
   "kind": "collectionType",
-  "collectionName": "blocks",
+  "collectionName": "transactions",
   "info": {
-    "name": "block",
+    "name": "transaction",
     "description": ""
   },
   "options": {
@@ -11,19 +11,19 @@
     "draftAndPublish": true
   },
   "attributes": {
+    "from": {
+      "type": "string"
+    },
+    "to": {
+      "type": "string"
+    },
+    "script": {
+      "type": "string"
+    },
     "hash": {
       "type": "string"
     },
-    "prevhash": {
-      "type": "string"
-    },
-    "transactions": {
-      "collection": "transaction"
-    },
-    "txhash": {
-      "type": "string"
-    },
-    "version": {
+    "amount": {
       "type": "integer"
     }
   }

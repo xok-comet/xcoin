@@ -2,6 +2,7 @@
 const { toDecimal } = require("bb26");
 const { sanitizeEntity } = require("strapi-utils");
 const sha1 = require("hash.js/lib/hash/sha/1");
+const { getNode } = require("../../../PeerToPeer");
 
 module.exports = {
   async checkAmount(ctx) {
@@ -63,7 +64,7 @@ module.exports = {
       let data = {
         hash: hash,
         prevhash: prevHash,
-        transaction: ctx.request.body.transaction,
+        txhash: transaction,
       };
       console.log(data);
       if (ctx.is("multipart")) {
@@ -72,6 +73,7 @@ module.exports = {
       } else {
         entity = await strapi.services.block.create(data);
       }
+      node.publish("CREATED_BLOCK", data);
       return sanitizeEntity(entity, { model: strapi.models.block });
     } else {
       return "error your proof hash is not correct";

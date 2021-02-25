@@ -1,24 +1,18 @@
-"use strict";
-
-const Command = require("./CommandInterface");
-
 const { P2PNode } = require("p2p-connect");
 const channel = {
-  SYNC_REQUEST: "SYNC_REQUEST",
-  SYNC_BLOCK: "SYNC_BLOCK",
-  SYNC_TRXN_REQUEST: "SYNC_TRXN_REQUEST",
-  SYNC_TRXN: "SYNC_TRXN",
-  CREATED_TRANSACTION: "CREATED_TRANSACTION",
-  CREATED_BLOCK: "CREATED_BLOCK",
-};
-
+    SYNC_REQUEST: "SYNC_REQUEST",
+    SYNC_BLOCK: "SYNC_BLOCK",
+    SYNC_TRXN_REQUEST: "SYNC_TRXN_REQUEST",
+    SYNC_TRXN: "SYNC_TRXN",
+    CREATED_TRANSACTION: "CREATED_TRANSACTION",
+    CREATED_BLOCK: "CREATED_BLOCK",
+  };
+let node;
 const start = async () => {
   try {
-    const node = new P2PNode();
+    node = new P2PNode();
     await node.start();
     console.log("Node Started: ", node.node.peerInfo.id.toB58String());
-    Command(node);
-
     node.node.on("peer:connect", peer => {
       setTimeout(() => {
         syncBlockchain(node);
@@ -50,7 +44,7 @@ const start = async () => {
     console.log(error);
   }
 };
-const syncBlockchain = async node => {
+const syncBlockchain = async (node) => {
   const nodeId = node.node.peerInfo.id.toB58String();
 
   node.publish(
@@ -62,7 +56,7 @@ const syncBlockchain = async node => {
   );
 };
 
-const syncTransaction = async node => {
+const syncTransaction = async (node) => {
   const nodeId = node.node.peerInfo.id.toB58String();
   node.publish(
     channel.SYNC_TRXN_REQUEST,
@@ -71,4 +65,10 @@ const syncTransaction = async node => {
     })
   );
 };
-start();
+const getNode = () => {
+  return node;
+};
+module.exports = {
+  start,
+  getNode,
+};

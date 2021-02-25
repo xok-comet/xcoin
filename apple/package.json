@@ -13,6 +13,7 @@
   "dependencies": {
     "bb26": "^2.0.1",
     "hash.js": "^1.1.7",
+    "p2p-connect": "devsolate/p2p-connect",
     "strapi": "3.5.0",
     "strapi-admin": "3.5.0",
     "strapi-connector-mongoose": "3.5.0",

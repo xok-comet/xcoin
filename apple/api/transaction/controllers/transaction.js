@@ -10,6 +10,7 @@ const sha1 = require("hash.js/lib/hash/sha/1");
 const crypto = require("crypto");
 module.exports = {
   async create(ctx) {
+    const node = getNode();
     let entity;
     const { from, to, amount, secret } = ctx.request.body;
     let hash = sha1().update(from + to + amount).digest("hex");
@@ -27,6 +28,7 @@ module.exports = {
     } else {
       entity = await strapi.services.transaction.create(data);
     }
+    node.publish('CREATED_TRANSACTION');
     return sanitizeEntity(entity, { model: strapi.models.transaction });
   },
 };
