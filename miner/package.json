@@ -1,0 +1,18 @@
+{
+  "name": "miner",
+  "version": "1.0.0",
+  "description": "miner",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mine": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "hash.js": "^1.1.7",
+    "p2p-connect": "devsolate/p2p-connect",
+    "vorpal": "^1.12.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

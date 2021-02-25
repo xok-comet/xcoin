@@ -1,0 +1,24 @@
+{
+  "kind": "collectionType",
+  "collectionName": "blocks",
+  "info": {
+    "name": "block",
+    "description": ""
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true,
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "hash": {
+      "type": "string"
+    },
+    "prevhash": {
+      "type": "string"
+    },
+    "transactions": {
+      "collection": "transaction"
+    }
+  }
+}
