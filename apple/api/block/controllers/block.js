@@ -1,7 +1,7 @@
 "use strict";
 const { toDecimal } = require("bb26");
 const { sanitizeEntity } = require("strapi-utils");
-const sha1 = require("hash.js/lib/hash/sha/1");
+const sha1 = require("hash.js/lib/hash/sha/256");
 const { getNode } = require("../../../PeerToPeer");
 
 module.exports = {
@@ -29,6 +29,11 @@ module.exports = {
   },
   async findLastBlock(ctx) {
     let lastBlock = await strapi.services.block.findLast(ctx.query);
+    return lastBlock;
+  },
+  async findBlockByVersion(ctx) {
+    const { version } = ctx.params;
+    let lastBlock = await strapi.services.block.findOne({version: version});
     return lastBlock;
   },
   async create(ctx) {
@@ -60,11 +65,16 @@ module.exports = {
     let difficulty = 1.3;
 
     if (sumOfProofHash < sumOfTxHash / difficulty) {
-      let hash = sha1().update(ctx.request.body.transaction.hash).digest("hex");
+      // let hash = sha1().update(ctx.request.body.transaction.hash).digest("hex");
+      let lastBlock = await strapi.services.block.findLast(ctx.query);
+      
       let data = {
-        hash: hash,
+        hash: proofHash,
         prevhash: prevHash,
-        txhash: transaction,
+        txhash: transactionHash,
+        txString: transaction,
+        proof:proof,
+        version: lastBlock.version + 1,
       };
       console.log(data);
       if (ctx.is("multipart")) {
@@ -73,7 +83,6 @@ module.exports = {
       } else {
         entity = await strapi.services.block.create(data);
       }
-      node.publish("CREATED_BLOCK", data);
       return sanitizeEntity(entity, { model: strapi.models.block });
     } else {
       return "error your proof hash is not correct";

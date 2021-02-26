@@ -20,11 +20,14 @@
     "transactions": {
       "collection": "transaction"
     },
-    "txhash": {
+    "txString": {
       "type": "string"
     },
     "version": {
       "type": "integer"
+    },
+    "proof": {
+      "type": "string"
     }
   }
 }

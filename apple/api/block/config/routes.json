@@ -18,8 +18,24 @@
     },
     {
       "method": "GET",
+      "path": "/blocks/findLastBlock",
+      "handler": "block.findLastBlock",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "GET",
       "path": "/blocks/check-amount/:address",
       "handler": "block.checkAmount",
+      "config": {
+        "policies": []
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/blocks/findBlockByVersion/:version",
+      "handler": "block.findBlockByVersion",
       "config": {
         "policies": []
       }

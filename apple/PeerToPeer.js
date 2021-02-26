@@ -1,62 +1,201 @@
 const { P2PNode } = require("p2p-connect");
+const axios = require("axios");
 const channel = {
-    SYNC_REQUEST: "SYNC_REQUEST",
-    SYNC_BLOCK: "SYNC_BLOCK",
-    SYNC_TRXN_REQUEST: "SYNC_TRXN_REQUEST",
-    SYNC_TRXN: "SYNC_TRXN",
-    CREATED_TRANSACTION: "CREATED_TRANSACTION",
-    CREATED_BLOCK: "CREATED_BLOCK",
-  };
+  SYNC_REQUEST: "SYNC_REQUEST",
+  SYNC_BLOCK: "SYNC_BLOCK",
+  SYNC_TRXN_REQUEST: "SYNC_TRXN_REQUEST",
+  SYNC_TRXN: "SYNC_TRXN",
+  CREATED_TRANSACTION: "CREATED_TRANSACTION",
+  CREATED_BLOCK: "CREATED_BLOCK",
+  GET_BLOCK_DETAIL: "GET_BLOCK_DETAIL",
+  GOT_BLOCK_DETAIL: "GOT_BLOCK_DETAIL",
+};
 let node;
+const BASE_URL = "http://localhost:1337";
+const GetMethod = async endpoint => {
+  try {
+    let data = await axios.get(BASE_URL + endpoint, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return data;
+  } catch (e) {
+    throw e;
+  }
+};
+const PostMethod = async (endpoint, body) => {
+  try {
+    let data = await axios.post(BASE_URL + endpoint, body, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return data;
+  } catch (e) {
+    throw e;
+  }
+};
 const start = async () => {
   try {
     node = new P2PNode();
     await node.start();
     console.log("Node Started: ", node.node.peerInfo.id.toB58String());
+
     node.node.on("peer:connect", peer => {
       setTimeout(() => {
         syncBlockchain(node);
         syncTransaction(node);
       }, 2000);
     });
+
     node.subscribe(channel.SYNC_REQUEST, async buffer => {
       const data = JSON.parse(buffer.data.toString());
       const currentNodeId = node.node.peerInfo.id.toB58String();
 
       // Request Sync from Other Node
       if (data.nodeId != currentNodeId) {
-        console.log("got SYNC_BLOCK from :" +data.nodeId);
-        // const block = await bc.findNext(data.latestHash);
-        // console.log(`Request block ${data.latestHash}`, block);
+        try {
+          let lastBlock = await GetMethod("/blocks/findLastBlock");
+          let currentBlockNumber = lastBlock.data.version;
+          console.log(data);
+          if (data.lastBlockNumber > currentBlockNumber) {
+            console.log(
+              "there is block and asking for blockdetail from " + data.nodeId
+            );
 
-        // if (block) {
-        //   node.publish(
-        //     channel.SYNC_BLOCK,
-        //     JSON.stringify({
-        //       nodeId: data.nodeId,
-        //       block: block,
-        //     })
-        //   );
-        // }
+            const currentNodeId = node.node.peerInfo.id.toB58String();
+            // getBlockDetail(node, currentBlockNumber + 1, data.nodeId);
+            node.publish(
+              channel.GET_BLOCK_DETAIL,
+              JSON.stringify({
+                nodeId: currentNodeId,
+                version: currentBlockNumber + 1,
+                destination: data.nodeId,
+              })
+            );
+          }
+        } catch (error) {
+          console.log(error);
+          let currentBlockNumber = 0;
+          console.log(data);
+          if (data.lastBlockNumber > currentBlockNumber) {
+            console.log(
+              "there is no block and asking for blockdetail from " + data.nodeId
+            );
+
+            const currentNodeId = node.node.peerInfo.id.toB58String();
+            // getBlockDetail(node, 1, data.nodeId);
+            node.publish(
+              channel.GET_BLOCK_DETAIL,
+              JSON.stringify({
+                nodeId: currentNodeId,
+                version: 1,
+                destination: data.nodeId,
+              })
+            );
+          }
+        }
+      }
+    });
+    node.subscribe(channel.GET_BLOCK_DETAIL, async buffer => {
+      const data = JSON.parse(buffer.data.toString());
+      const currentNodeId = node.node.peerInfo.id.toB58String();
+      if (data.nodeId != currentNodeId && data.destination == currentNodeId) {
+        console.log(
+          "got signal asking for block detail version: " + data.version
+        );
+        getBlockDetail(node, data.version, data.nodeId);
+      }
+    });
+    node.subscribe(channel.GOT_BLOCK_DETAIL, async buffer => {
+      const data = JSON.parse(buffer.data.toString());
+      const currentNodeId = node.node.peerInfo.id.toB58String();
+      console.log(node.node.peerInfo);
+
+      // Request Sync from Other Node
+      if (data.nodeId != currentNodeId && data.destination == currentNodeId) {
+        console.log("GET_BLOCK_DETAIL from :" + data.nodeId);
+        const myLastBlock = 0;
+        //save block to your database
+        let body = {
+          proof: data.proof,
+          transaction: data.transaction,
+        };
+        console.log("waiting to save data");
+        console.log(body);
+        let block = await PostMethod("/blocks", body);
+
+        if (block) {
+          console.log("do sync");
+          syncBlockchain(node);
+        }
+      }
+    });
+
+    node.subscribe(channel.SENT_BLOCK_DETAIL, async buffer => {
+      const data = JSON.parse(buffer.data.toString());
+      const currentNodeId = node.node.peerInfo.id.toB58String();
+      console.log(node.node.peerInfo);
+
+      // Request Sync from Other Node
+      if (data.nodeId != currentNodeId && data.destination == currentNodeId) {
+        console.log("GET_BLOCK_DETAIL from :" + data.nodeId);
+        //wait save data
+        number = data.blockId;
+
+        //do sync
+        syncBlockchain(node);
       }
     });
   } catch (error) {
     console.log(error);
   }
 };
-const syncBlockchain = async (node) => {
+const syncBlockchain = async node => {
+  console.log("fetching block");
+  try {
+    let lastBlock = await GetMethod("/blocks/findLastBlock");
+    console.log("last block version is" + lastBlock.data.version);
+    const nodeId = node.node.peerInfo.id.toB58String();
+    node.publish(
+      channel.SYNC_REQUEST,
+      JSON.stringify({
+        nodeId: nodeId,
+        lastBlockNumber: lastBlock.data.version,
+      })
+    );
+  } catch (error) {
+    //there is no lastblock so get the first block
+    const nodeId = node.node.peerInfo.id.toB58String();
+    node.publish(
+      channel.SYNC_REQUEST,
+      JSON.stringify({
+        nodeId: nodeId,
+        lastBlockNumber: 0,
+      })
+    );
+  }
+};
+const getBlockDetail = async (node, blockVersion, destination) => {
   const nodeId = node.node.peerInfo.id.toB58String();
-
+  let lastBlockData = await GetMethod(
+    "/blocks/findBlockByVersion/" + blockVersion
+  );
+  let lastBlock = lastBlockData.data;
+  console.log("lastblock detail is");
+  console.log(lastBlock);
   node.publish(
-    channel.SYNC_REQUEST,
+    channel.GOT_BLOCK_DETAIL,
     JSON.stringify({
       nodeId: nodeId,
-      latestHash: "latestHash",
+      proof: lastBlock.proof,
+      tx: lastBlock.txString,
+      destination: destination,
     })
   );
 };
-
-const syncTransaction = async (node) => {
+const syncTransaction = async node => {
   const nodeId = node.node.peerInfo.id.toB58String();
   node.publish(
     channel.SYNC_TRXN_REQUEST,

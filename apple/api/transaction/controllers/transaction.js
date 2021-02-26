@@ -8,6 +8,7 @@
 const { sanitizeEntity } = require("strapi-utils");
 const sha1 = require("hash.js/lib/hash/sha/1");
 const crypto = require("crypto");
+const { getNode } = require("../../../PeerToPeer");
 module.exports = {
   async create(ctx) {
     const node = getNode();
@@ -28,7 +29,17 @@ module.exports = {
     } else {
       entity = await strapi.services.transaction.create(data);
     }
-    node.publish('CREATED_TRANSACTION');
+    try {
+      console.log(node.node.peerInfo.id.toB58String());
+      node.publish(
+        "NEW_TX",
+        JSON.stringify({
+          hash: hash,
+        })
+      );
+    } catch (error) {
+      console.log(error);
+    }
     return sanitizeEntity(entity, { model: strapi.models.transaction });
   },
 };
