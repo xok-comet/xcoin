@@ -25,6 +25,14 @@
     },
     "hash": {
       "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "confirm",
+        "reject"
+      ]
     }
   }
 }

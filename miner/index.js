@@ -7,9 +7,10 @@ const Mine = require("./mine");
 const channel = {
   SYNC_REQUEST: "SYNC_REQUEST",
   SYNC_BLOCK: "SYNC_BLOCK",
+  SYNC: "SYNC",
   SYNC_TRXN_REQUEST: "SYNC_TRXN_REQUEST",
   SYNC_TRXN: "SYNC_TRXN",
-  NEW_TX :"NEW_TX",
+  NEW_TX: "NEW_TX",
   CREATED_TRANSACTION: "CREATED_TRANSACTION",
   CREATED_BLOCK: "CREATED_BLOCK",
   GET_BLOCK_DETAIL: "GET_BLOCK_DETAIL",
@@ -55,6 +56,14 @@ const start = async () => {
         syncTransaction(node);
       }, 2000);
     });
+
+    node.subscribe(channel.SYNC, async buffer => {
+      const data = JSON.parse(buffer.data.toString());
+      const currentNodeId = node.node.peerInfo.id.toB58String();
+      if (data.nodeId != currentNodeId) {
+        syncBlockchain(node);
+      }
+    });
     node.subscribe(channel.SYNC_REQUEST, async buffer => {
       const data = JSON.parse(buffer.data.toString());
       const currentNodeId = node.node.peerInfo.id.toB58String();
@@ -81,6 +90,7 @@ const start = async () => {
             );
           }
         } catch (error) {
+          console.log(error);
           let currentBlockNumber = 0;
           console.log(data);
           if (data.lastBlockNumber > currentBlockNumber) {
@@ -112,10 +122,21 @@ const start = async () => {
       if (data.nodeId != currentNodeId && data.destination == currentNodeId) {
         console.log("GET_BLOCK_DETAIL from :" + data.nodeId);
         const myLastBlock = 0;
+        //save tx to your database
+        let txbody = {
+          hash: data.hash,
+          from: data.from,
+          to: data.to,
+          amount: data.amount,
+          secret: data.script,
+          status: data.status,
+        };
+        let tx = await PostMethod("/transactions", txbody);
         //save block to your database
         let body = {
           proof: data.proof,
           transaction: data.tx,
+          txid: tx.data.id,
         };
         console.log("waiting to save data");
         try {
@@ -123,7 +144,13 @@ const start = async () => {
 
           if (block) {
             console.log("do sync");
-            syncBlockchain(node);
+            // syncBlockchain(node);
+            node.publish(
+              channel.SYNC,
+              JSON.stringify({
+                nodeId: currentNodeId,
+              })
+            );
           }
         } catch (error) {
           // console.log(error);
@@ -145,28 +172,23 @@ const start = async () => {
     node.subscribe(channel.NEW_TX, async buffer => {
       const data = JSON.parse(buffer.data.toString());
       const currentNodeId = node.node.peerInfo.id.toB58String();
-      if (data.nodeId != currentNodeId ) {
-        console.log(
-          "got signal of new transaction: " 
-        );
-        Mine(data.hash,node);
+      if (data.nodeId != currentNodeId) {
+        console.log("got signal of new transaction: ");
+        let body = {
+          hash: data.hash,
+          from: data.from,
+          to: data.to,
+          amount: data.amount,
+          script: data.script,
+          status: "pending",
+        };
+        let tx = await PostMethod("/transactions", body);
+        let txData = tx.data;
+        if (tx) {
+          Mine(txData.hash, node, txData.id);
+        }
       }
     });
-    // node.subscribe(channel.SENT_BLOCK_DETAIL, async buffer => {
-    //   const data = JSON.parse(buffer.data.toString());
-    //   const currentNodeId = node.node.peerInfo.id.toB58String();
-    //   console.log(node.node.peerInfo);
-
-    //   // Request Sync from Other Node
-    //   if (data.nodeId != currentNodeId && data.destination == currentNodeId) {
-    //     console.log("GET_BLOCK_DETAIL from :" + data.nodeId);
-    //     //wait save data
-    //     number = data.blockId;
-
-    //     //do sync
-    //     syncBlockchain(node);
-    //   }
-    // });
   } catch (error) {
     console.log(error);
   }
@@ -175,7 +197,7 @@ const syncBlockchain = async node => {
   console.log("fetching block");
   try {
     let lastBlock = await GetMethod("/blocks/findLastBlock");
-    console.log("last block is" + lastBlock);
+    console.log("last block is" + lastBlock.data.version);
     const nodeId = node.node.peerInfo.id.toB58String();
     node.publish(
       channel.SYNC_REQUEST,
@@ -203,14 +225,24 @@ const getBlockDetail = async (node, blockVersion, destination) => {
   );
   let lastBlock = lastBlockData.data;
   console.log("lastblock detail is");
-  console.log(lastBlock);
+  console.log(lastBlock.transactions[0]);
+  let txData = lastBlock.transactions[0];
+  // let txData = await GetMethod("/transactions/" + lastBlock.transactions[0].id);
   node.publish(
     channel.GOT_BLOCK_DETAIL,
     JSON.stringify({
       nodeId: nodeId,
+      from: txData.from,
+      to: txData.to,
+      amount: txData.amount,
+      script: txData.script,
+      hash: txData.hash,
+      destination: destination,
+      status: txData.status,
       proof: lastBlock.proof,
       transaction: lastBlock.txString,
       destination: destination,
+      txid: lastBlock.transactions[0].id,
     })
   );
 };

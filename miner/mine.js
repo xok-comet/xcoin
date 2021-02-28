@@ -15,6 +15,20 @@ const GetMethod = async endpoint => {
     throw e;
   }
 };
+const PutMethod = async (endpoint, body) => {
+  try {
+    console.log(body);
+    let data = await axios.put(BASE_URL + endpoint, body, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    console.log(data);
+    return data;
+  } catch (e) {
+    throw e;
+  }
+};
 const PostMethod = async (endpoint, body) => {
   try {
     console.log(body);
@@ -29,7 +43,7 @@ const PostMethod = async (endpoint, body) => {
     throw e;
   }
 };
-const Mine = async (transaction, node) => {
+const Mine = async (transaction, node, id) => {
   while (true) {
     var proof = Math.random().toString(36).substring(2);
     // var transaction =
@@ -62,9 +76,13 @@ const Mine = async (transaction, node) => {
       console.log("proof is " + proof);
       console.log(sumOfProofHash);
       console.log(sumOfTxHash / difficulty);
+      let bodyTx = { status: "confirm" };
+      let tx = await PutMethod("/transactions/" + id, bodyTx);
+
       let body = {
         proof: proof,
         transaction: transaction,
+        txid: id,
       };
       let block = await PostMethod("/blocks", body);
 

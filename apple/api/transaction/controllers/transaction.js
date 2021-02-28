@@ -13,7 +13,7 @@ module.exports = {
   async create(ctx) {
     const node = getNode();
     let entity;
-    const { from, to, amount, secret } = ctx.request.body;
+    const { from, to, amount, secret, status } = ctx.request.body;
     let hash = sha1().update(from + to + amount).digest("hex");
     let data = {
       hash: hash,
@@ -21,8 +21,8 @@ module.exports = {
       to: to,
       amount: amount,
       script: secret,
+      status: status,
     };
-    console.log(data);
     if (ctx.is("multipart")) {
       const { data, files } = parseMultipartData(ctx);
       entity = await strapi.services.transaction.create(data, { files });
@@ -31,12 +31,18 @@ module.exports = {
     }
     try {
       console.log(node.node.peerInfo.id.toB58String());
-      node.publish(
-        "NEW_TX",
-        JSON.stringify({
-          hash: hash,
-        })
-      );
+      if (status == "pending") {
+        node.publish(
+          "NEW_TX",
+          JSON.stringify({
+            hash: hash,
+            from: entity.from,
+            to: entity.to,
+            script: entity.script,
+            amount: entity.amount,
+          })
+        );
+      }
     } catch (error) {
       console.log(error);
     }

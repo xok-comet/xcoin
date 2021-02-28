@@ -25,6 +25,14 @@
     },
     "amount": {
       "type": "integer"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "confirm",
+        "reject"
+      ]
     }
   }
 }

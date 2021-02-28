@@ -40,7 +40,7 @@ module.exports = {
     let lastBlock = await strapi.services.block.findLast(ctx.query);
     let prevHash = lastBlock.hash;
     //sum of sha1 of proof sha1 need to be greater than sum of sha1 of all transaction
-    const { proof, transaction } = ctx.request.body;
+    const { proof, transaction,txid } = ctx.request.body;
     var transactionHash = sha1().update(transaction).digest("hex");
     var arrayCharTxHash = Array.from(transactionHash.toUpperCase());
     var intTxHash = arrayCharTxHash.filter(e => {
@@ -75,6 +75,7 @@ module.exports = {
         txString: transaction,
         proof:proof,
         version: lastBlock.version + 1,
+        transactions:[txid]
       };
       console.log(data);
       if (ctx.is("multipart")) {

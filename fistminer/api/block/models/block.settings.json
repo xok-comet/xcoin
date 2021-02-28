@@ -24,7 +24,8 @@
       "type": "string"
     },
     "version": {
-      "type": "integer"
+      "type": "integer",
+      "unique": true
     },
     "proof": {
       "type": "string"
